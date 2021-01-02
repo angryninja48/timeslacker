@@ -1,6 +1,9 @@
 import os
 import json
 import datetime
+import hashlib
+import hmac
+
 
 from flask import Flask
 from app import TimeSheet
@@ -16,8 +19,34 @@ app = Flask(__name__)
 slackify = Slackify(app=app)
 cli = Slack(SLACK_TOKEN)
 
+
+def verify_slack(request):
+    timestamp = request.headers['X-Slack-Request-Timestamp']
+    slack_signature = request.headers['X-Slack-Signature']
+    # request_body = request.get_data()
+    slack_signing_secret = os.environ['SLACK_SIGNING_SECRET'].encode('utf8')
+
+    # https://stackoverflow.com/questions/62878160/how-to-get-raw-request-payload-in-flask-connexion
+    # Stupid hack - Guessing slackify encodes which returns get_data() empty
+    import urllib.parse
+    form_data = request.form
+    request_body = '&'.join([k + '=' + urllib.parse.quote_plus(v) for k, v in form_data.items()])
+
+    sig_basestring = f"v0:{timestamp}:{request_body}".encode('utf-8')
+    my_signature = 'v0=' + hmac.new(slack_signing_secret, sig_basestring, hashlib.sha256).hexdigest()
+
+    if hmac.compare_digest(my_signature, slack_signature):
+        return True
+    else:
+        return False
+
+@app.route('/kickoff')
+def index():
+    yes_no()
+    return OK
+
 @slackify.command
-def kickoff():
+def yes_no():
     YES = 'yes'
     NO = 'no'
     yes_no_buttons = {
@@ -56,125 +85,126 @@ def kickoff():
 
 @slackify.action(action_id="yes")
 def yes(action):
-    text_blok = text_block(':rocket: Submitting timesheet...')
-    respond(action['response_url'], {'blocks': [text_blok]})
-    submit_timesheet()
-    # user_id = action['user'].get('id')
-    # text_blok = text_block(f':heavy_check_mark: Timesheet Submitted.\n')
-    # send_message(cli, [text_blok], user_id)
-    return OK
+
+    if verify_slack(request):
+        text_blok = text_block(':rocket: Submitting timesheet...')
+        respond(action['response_url'], {'blocks': [text_blok]})
+        submit_timesheet()
+        return OK
 
 
 @slackify.action(action_id="no")
 def no(action):
-    response = json.loads(request.form["payload"])
+    if verify_slack(request):
+        response = json.loads(request.form["payload"])
 
-    check_block = {
-    	"type": "input",
-    	"element": {
-    		"type": "checkboxes",
-            "action_id": "checkboxes-action",
-    			"options": [
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Monday",
-    						"emoji": True
-    					},
-    					"value": "Monday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Tuesday",
-    						"emoji": True
-    					},
-    					"value": "Tuesday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Wednesday",
-    						"emoji": True
-    					},
-    					"value": "Wednesday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Thursday",
-    						"emoji": True
-    					},
-    					"value": "Thursday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Friday",
-    						"emoji": True
-    					},
-    					"value": "Friday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Saturday",
-    						"emoji": True
-    					},
-    					"value": "Saturday"
-    				},
-    				{
-    					"text": {
-    						"type": "plain_text",
-    						"text": "Sunday",
-    						"emoji": True
-    					},
-    					"value": "Sunday"
-    				},
-                ]
-        },
-        "label": {
-    		"type": "plain_text",
-    		"text": "Please select working days",
-    		"emoji": True
-    	}
-    }
+        check_block = {
+        	"type": "input",
+        	"element": {
+        		"type": "checkboxes",
+                "action_id": "checkboxes-action",
+        			"options": [
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Monday",
+        						"emoji": True
+        					},
+        					"value": "Monday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Tuesday",
+        						"emoji": True
+        					},
+        					"value": "Tuesday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Wednesday",
+        						"emoji": True
+        					},
+        					"value": "Wednesday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Thursday",
+        						"emoji": True
+        					},
+        					"value": "Thursday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Friday",
+        						"emoji": True
+        					},
+        					"value": "Friday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Saturday",
+        						"emoji": True
+        					},
+        					"value": "Saturday"
+        				},
+        				{
+        					"text": {
+        						"type": "plain_text",
+        						"text": "Sunday",
+        						"emoji": True
+        					},
+        					"value": "Sunday"
+        				},
+                    ]
+            },
+            "label": {
+        		"type": "plain_text",
+        		"text": "Please select working days",
+        		"emoji": True
+        	}
+        }
 
-    modal_blocks = [
-        check_block
-    ]
-    workday_form = {
-        "type": "modal",
-        "callback_id": "workday_form",
-        "title": {
-            "type": "plain_text",
-            "text": "Working Days",
-            "emoji": True
-        },
-        "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": True
-        },
-        "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": True
-        },
-        "blocks": modal_blocks
-    }
-    cli.views_open(
-        trigger_id=response['trigger_id'],
-        view=workday_form
-    )
-    text_blok = text_block(':rocket: Submitting timesheet...')
-    respond(action['response_url'], {'blocks': [text_blok]})
-    return OK
+        modal_blocks = [
+            check_block
+        ]
+        workday_form = {
+            "type": "modal",
+            "callback_id": "workday_form",
+            "title": {
+                "type": "plain_text",
+                "text": "Working Days",
+                "emoji": True
+            },
+            "submit": {
+                "type": "plain_text",
+                "text": "Submit",
+                "emoji": True
+            },
+            "close": {
+                "type": "plain_text",
+                "text": "Cancel",
+                "emoji": True
+            },
+            "blocks": modal_blocks
+        }
+        cli.views_open(
+            trigger_id=response['trigger_id'],
+            view=workday_form
+        )
+        text_blok = text_block(':rocket: Submitting timesheet...')
+        respond(action['response_url'], {'blocks': [text_blok]})
+        return OK
 
 @slackify.view(view_callback_id="workday_form")
 def register_callback():
-    process_payload(request.form["payload"])
-    return OK
+    if verify_slack(request):
+        process_payload(request.form["payload"])
+        return OK
 
 @async_task
 def process_payload(payload):
