@@ -110,7 +110,7 @@ class TimeSheet:
 
     def run(self):
         self.login()
-        # self.fill_timesheet()
-        # self.submit()
-        # self.logout()
+        self.fill_timesheet()
+        self.submit()
+        self.logout()
 
