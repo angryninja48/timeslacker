@@ -7,6 +7,7 @@ from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
 
 TIME_SHEET_URL = os.getenv("TIME_SHEET_URL")
 TIME_SHEET_FIELD = {
@@ -20,11 +21,12 @@ TIME_SHEET_FIELD = {
 }
 
 class TimeSheet:
-    def __init__(self, username, password, days=None, headless=True):
+    def __init__(self, username, password, days=None, non_worked_days=None, headless=True):
     
         self.username = username
         self.password = password
         self.days = days
+        self.non_worked_days = non_worked_days
         self.browser_timeout_seconds = 10
         self.headless = headless
 
@@ -41,6 +43,9 @@ class TimeSheet:
         if not self.days:
             self.days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
         
+        if not self.non_worked_days:
+            self.non_worked_days = ['Saturday', 'Sunday']
+
     def wait(self):
         return WebDriverWait(self.browser, 20)
 
@@ -58,8 +63,8 @@ class TimeSheet:
         print(f'Title: {self.browser.title}')
 
         try:
-            self.browser.find_element_by_id("j_username").send_keys(self.username)
-            self.browser.find_element_by_id("j_password").send_keys(self.password)
+            self.browser.find_element_by_id("username").send_keys(self.username)
+            self.browser.find_element_by_id("password").send_keys(self.password)
             self.browser.find_element_by_id("submit").click()
         except:
             pass # Add in better exception handling
@@ -78,22 +83,50 @@ class TimeSheet:
 
     def fill_timesheet(self):
         # self.wait().until(EC.presence_of_element_located((By.XPATH, "//*[@id='monDay']")))
-        self.implicitlywait()
-        self.wait().until(EC.presence_of_element_located((By.ID, "timeDiv")))
+        # self.implicitlywait()
+        self.wait().until(EC.presence_of_element_located((By.ID, "navigation-bar")))
 
-        for x in self.days:
-            self.browser.find_element_by_id(TIME_SHEET_FIELD[x]).clear()
-            self.browser.find_element_by_id(TIME_SHEET_FIELD[x]).send_keys("1")    
+        # Fill worked days
+        for day in self.days:
+            self.browser.find_element_by_id(TIME_SHEET_FIELD[day]).clear()
+            self.browser.find_element_by_id(TIME_SHEET_FIELD[day]).send_keys("1")    
+
+        # Fill non working days
+        for day in self.non_worked_days:
+            # build leave id string
+            leaveid =  f"{day.lower()[0:3]}Leave"
+            leavetype =  f"{leaveid}Type"
+
+            # Clear field
+            self.browser.find_element_by_id(TIME_SHEET_FIELD[day]).clear()
+            self.browser.find_element_by_id(TIME_SHEET_FIELD[day]).send_keys("0")
+            # Select full day leave
+            select = Select(self.browser.find_element_by_id(leaveid))
+            select.select_by_value('1.0')
+            # Select reason as standard non working day
+            select = Select(self.browser.find_element_by_id(leavetype))
+            select.select_by_value('6')
+
+
+        # # Set Saturday & Sunday as non working days
+        # select = Select(self.browser.find_element_by_id('satLeave'))
+        # select.select_by_value('1.0')
+        # select = Select(self.browser.find_element_by_id('satLeaveType'))
+        # select.select_by_value('6')
+        # select = Select(self.browser.find_element_by_id('sunLeave'))
+        # select.select_by_value('1.0')
+        # select = Select(self.browser.find_element_by_id('sunLeaveType'))
+        # select.select_by_value('6')
 
         # Click disclaimer
         # self.browser.find_element_by_id("ts_disclaimer_1").click()
         disclaimer = self.browser.find_element_by_xpath("//input[@id='ts_disclaimer_1' and @type='checkbox']")
         self.browser.execute_script("arguments[0].click();", disclaimer)
-
+        import pdb;pdb.set_trace()
         if self.browser.find_element_by_id("ts_disclaimer_1").is_selected():
             print('Timesheet Checkbox clicked!') 
         else:
-            print('Timesheet Entry Failed') 
+            print('Timesheet Entry Failed')
 
     def submit(self):
         # 1st Submit
@@ -111,6 +144,6 @@ class TimeSheet:
     def run(self):
         self.login()
         self.fill_timesheet()
-        self.submit()
-        self.logout()
+        # self.submit()
+        # self.logout() # logout doesn't work
 

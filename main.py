@@ -15,6 +15,8 @@ TS_USER = os.getenv("TS_USER")
 TS_PASSWORD = os.getenv("TS_PASSWORD")
 SLACK_TOKEN = os.getenv("SLACK_TOKEN")
 
+DAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+
 app = Flask(__name__)
 slackify = Slackify(app=app)
 cli = Slack(SLACK_TOKEN)
@@ -218,14 +220,15 @@ def process_payload(payload):
     for i in reponse_values:
         working_days.append(i.get('value', None))
 
-    submit_timesheet(days=working_days)
+    # Get list of unworked days
+    non_worked_days = list(set(working_days) - DAYS)
 
-    # text_blok = text_block(f':heavy_check_mark: Timesheet Submitted.\n')
-    # send_message(cli, [text_blok], payload_response['user']['id'])
+    submit_timesheet(days=working_days, non_worked_days=non_worked_days)
+
 
 @async_task
-def submit_timesheet(days=None):
-    time = TimeSheet(username=TS_USER,password=TS_PASSWORD,days=days)
+def submit_timesheet(days=None, non_worked_days=None):
+    time = TimeSheet(username=TS_USER,password=TS_PASSWORD,days=days, non_worked_days=non_worked_days)
     submit = time.run()
     date = datetime.datetime.now().strftime("%d-%m-%Y")
     cli.chat_postMessage(channel='#timesheets', text=f':white_check_mark: Timesheet Submitted - *{date}*')
