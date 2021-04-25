@@ -122,7 +122,6 @@ class TimeSheet:
         # self.browser.find_element_by_id("ts_disclaimer_1").click()
         disclaimer = self.browser.find_element_by_xpath("//input[@id='ts_disclaimer_1' and @type='checkbox']")
         self.browser.execute_script("arguments[0].click();", disclaimer)
-        import pdb;pdb.set_trace()
         if self.browser.find_element_by_id("ts_disclaimer_1").is_selected():
             print('Timesheet Checkbox clicked!') 
         else:
@@ -144,6 +143,7 @@ class TimeSheet:
     def run(self):
         self.login()
         self.fill_timesheet()
-        # self.submit()
+        self.submit()
+        self.close()
         # self.logout() # logout doesn't work
 

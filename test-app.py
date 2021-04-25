@@ -4,6 +4,7 @@ from app import TimeSheet
 
 TS_USER = os.getenv("TS_USER")
 TS_PASSWORD = os.getenv("TS_PASSWORD")
+DAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
 def main():
     worked_days = ['Tuesday', 'Wednesday', 'Thursday']
