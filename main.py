@@ -221,7 +221,7 @@ def process_payload(payload):
         working_days.append(i.get('value', None))
 
     # Get list of unworked days
-    non_worked_days = list(set(working_days) - DAYS)
+    non_worked_days = list(DAYS - set(working_days))
 
     submit_timesheet(days=working_days, non_worked_days=non_worked_days)
 

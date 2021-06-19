@@ -107,17 +107,6 @@ class TimeSheet:
             select = Select(self.browser.find_element_by_id(leavetype))
             select.select_by_value('6')
 
-
-        # # Set Saturday & Sunday as non working days
-        # select = Select(self.browser.find_element_by_id('satLeave'))
-        # select.select_by_value('1.0')
-        # select = Select(self.browser.find_element_by_id('satLeaveType'))
-        # select.select_by_value('6')
-        # select = Select(self.browser.find_element_by_id('sunLeave'))
-        # select.select_by_value('1.0')
-        # select = Select(self.browser.find_element_by_id('sunLeaveType'))
-        # select.select_by_value('6')
-
         # Click disclaimer
         # self.browser.find_element_by_id("ts_disclaimer_1").click()
         disclaimer = self.browser.find_element_by_xpath("//input[@id='ts_disclaimer_1' and @type='checkbox']")

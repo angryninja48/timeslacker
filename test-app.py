@@ -7,7 +7,7 @@ TS_PASSWORD = os.getenv("TS_PASSWORD")
 DAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
 def main():
-    worked_days = ['Tuesday', 'Wednesday', 'Thursday']
+    worked_days = ['Tuesday', 'Wednesday', 'Thursday', 'Friday']
     non_worked_days = list(DAYS - set(worked_days))
 
     time = TimeSheet(username=TS_USER,password=TS_PASSWORD,days=worked_days,non_worked_days=non_worked_days, headless=False)
